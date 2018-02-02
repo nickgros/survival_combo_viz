@@ -6,6 +6,11 @@ library(feather)
 library(patchwork)
 library(dplyr)
 
+
+getStrata <- function(fac, true_string, false_string) {
+  factor(ifelse(fac, true_string, false_string))
+}
+
 options(shiny.maxRequestSize = 500 * 1024 ^ 2)
 #correl.table <- NULL
 server <- function(input, output, session) {
@@ -58,12 +63,13 @@ server <- function(input, output, session) {
     if (length(input$genes) == 0) {
       strata <- rep(1, times = nrow(surv_table))
     } else {
-      strata <- surv_table[[input$genes[[1]]]]
-    }
+      strata <- getStrata(fac = surv_table[[input$genes[[1]]]] == 1,
+                          paste(input$genes[[1]], "mut"),
+                          paste(input$genes[[1]], "wt"))
+      }
     form <-
       do.call(Surv, list(time = surv_table[[input$survival_time]], event = surv_table[[input$survival_event]]))
-    print(form)
-    print(strata)
+
     fit <-
       do.call(survfit, list(formula = form ~ strata, data = surv_table))
     
@@ -72,19 +78,18 @@ server <- function(input, output, session) {
         data = surv_table,
         fit = fit,
         pval = T,
-        title = input$genes[[1]],
-        legend.labs = c(paste(input$genes[[1]], "wt"), paste(input$genes[[1]], "mut"))
+        title = input$genes[[1]]
       )
     p
   })
   
   output$plot2 <- renderPlot({
-    strata <- surv_table[[input$genes[[2]]]]
+    strata <- getStrata(fac = surv_table[[input$genes[[2]]]] == 1,
+                        paste(input$genes[[2]], "mut"),
+                        paste(input$genes[[2]], "wt"))
     
     form <-
       do.call(Surv, list(time = surv_table[[input$survival_time]], event = surv_table[[input$survival_event]]))
-    print(form)
-    print(strata)
     fit <-
       do.call(survfit, list(formula = form ~ strata, data = surv_table))
     
@@ -93,8 +98,7 @@ server <- function(input, output, session) {
         data = surv_table,
         fit = fit,
         pval = T,
-        title = input$genes[[2]],
-        legend.labs = c(paste(input$genes[[2]], "wt"), paste(input$genes[[2]], "mut"))
+        title = input$genes[[2]]
       )
     p
   })
@@ -102,13 +106,11 @@ server <- function(input, output, session) {
   
   output$plot3 <- renderPlot({
     # Both WT
-    strata <-
-      !surv_table[[input$genes[[1]]]] & !surv_table[[input$genes[[2]]]]
-    
+    strata <- getStrata(fac = !surv_table[[input$genes[[1]]]] & !surv_table[[input$genes[[2]]]],
+                        "Both WT",
+                        "At least one mut")
     form <-
       do.call(Surv, list(time = surv_table[[input$survival_time]], event = surv_table[[input$survival_event]]))
-    print(form)
-    print(strata)
     fit <-
       do.call(survfit, list(formula = form ~ strata, data = surv_table))
     
@@ -118,7 +120,6 @@ server <- function(input, output, session) {
         fit = fit,
         pval = T,
         title = paste(input$genes[[1]], " and ", input$genes[[2]], " wt", sep = ""),
-        legend.labs = c("At least one mut", "Both wt"),
         risk.table = F
       )
     p
@@ -126,13 +127,12 @@ server <- function(input, output, session) {
   
   output$plot4 <- renderPlot({
     # Gene 1 mut Gene 2 wt
-    strata <-
-      surv_table[[input$genes[[1]]]] & !surv_table[[input$genes[[2]]]]
+    strata <- getStrata(fac = surv_table[[input$genes[[1]]]] & !surv_table[[input$genes[[2]]]],
+                        paste(input$genes[[1]], "m & ", input$genes[[2]], "wt", sep = ""),
+                        paste(input$genes[[1]], "wt and/or ", input$genes[[2]], "mut", sep = ""))
     
     form <-
       do.call(Surv, list(time = surv_table[[input$survival_time]], event = surv_table[[input$survival_event]]))
-    print(form)
-    print(strata)
     fit <-
       do.call(survfit, list(formula = form ~ strata, data = surv_table))
     
@@ -142,10 +142,6 @@ server <- function(input, output, session) {
         fit = fit,
         pval = T,
         title = paste(input$genes[[1]], " mut and ", input$genes[[2]], " wt", sep = ""),
-        legend.labs = c(
-          paste(input$genes[[1]], "wt OR", input$genes[[2]], "mut"),
-          paste(input$genes[[1]], "mut and", input$genes[[2]], "wt")
-        ),
         risk.table = F
       )
     p
@@ -154,13 +150,12 @@ server <- function(input, output, session) {
 
   output$plot5 <- renderPlot({
     # Gene 1 wt Gene 2 mut
-    strata <-
-      !surv_table[[input$genes[[1]]]] & surv_table[[input$genes[[2]]]]
+    strata <- getStrata(fac = !surv_table[[input$genes[[1]]]] & surv_table[[input$genes[[2]]]],
+                        paste(input$genes[[1]], "wt & ", input$genes[[2]], "mut", sep = ""),
+                        paste(input$genes[[1]], "mut and/or ", input$genes[[2]], "wt", sep = ""))
     
     form <-
       do.call(Surv, list(time = surv_table[[input$survival_time]], event = surv_table[[input$survival_event]]))
-    print(form)
-    print(strata)
     fit <-
       do.call(survfit, list(formula = form ~ strata, data = surv_table))
     
@@ -170,10 +165,6 @@ server <- function(input, output, session) {
         fit = fit,
         pval = T,
         title = paste(input$genes[[1]], " wt and ", input$genes[[2]], " mut", sep = ""),
-        legend.labs = c(
-          paste(input$genes[[1]], "mut OR", input$genes[[2]], "wt"),
-          paste(input$genes[[1]], "wt and", input$genes[[2]], "mut")
-        ),
         risk.table = F
       )
     p
@@ -181,13 +172,11 @@ server <- function(input, output, session) {
 
   output$plot6 <- renderPlot({
     # Gene 1 mut Gene 2 mut
-    strata <-
-      surv_table[[input$genes[[1]]]] & surv_table[[input$genes[[2]]]]
-    
-    form <-
+    strata <- getStrata(fac = surv_table[[input$genes[[1]]]] & surv_table[[input$genes[[2]]]],
+                        "Both mut",
+                        "At least 1 wt")
+        form <-
       do.call(Surv, list(time = surv_table[[input$survival_time]], event = surv_table[[input$survival_event]]))
-    print(form)
-    print(strata)
     fit <-
       do.call(survfit, list(formula = form ~ strata, data = surv_table))
     
@@ -197,7 +186,6 @@ server <- function(input, output, session) {
         fit = fit,
         pval = T,
         title = paste(input$genes[[1]], " and ", input$genes[[2]], " mut", sep = ""),
-        legend.labs = c("Either wt", "Both mut"),
         risk.table = F
       )
     p
