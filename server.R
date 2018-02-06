@@ -78,7 +78,8 @@ server <- function(input, output, session) {
         data = surv_table,
         fit = fit,
         pval = T,
-        title = input$genes[[1]]
+        title = input$genes[[1]],
+        risk.table = T
       )
     p
   })
@@ -98,7 +99,8 @@ server <- function(input, output, session) {
         data = surv_table,
         fit = fit,
         pval = T,
-        title = input$genes[[2]]
+        title = input$genes[[2]],
+        risk.table = T
       )
     p
   })

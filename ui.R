@@ -27,6 +27,6 @@ ui <- fluidPage(
     )
   ),
   mainPanel(
-    tags$a(href="http://nickgros.com/shiny.html", "nickgros.com")
+    tags$a(href="http://nickgros.com/", "nickgros.com")
   )
 )
